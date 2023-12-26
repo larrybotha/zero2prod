@@ -1,6 +1,6 @@
 # zero2prod
 
-Notes and annotations from the zero2prod book
+Notes and annotations from the [zero2prod](https://www.zero2prod.com/) book
 
 ## Introduction
 
