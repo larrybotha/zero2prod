@@ -35,8 +35,18 @@ Notes and annotations from the [zero2prod](https://www.zero2prod.com/) book
 
   We can evaluate the result of applying macros using the `cargo-expand` library
 
-  - once expanded, we can see that `main` is indeed synchronous - the `async`
-    keyword has been removed
+  e.g.
+
+  ```bash
+  $ cargo expand --bin zero2prod
+  ```
+
+  Once expanded, we can see that `main` is indeed synchronous - the `async`
+  keyword has been removed
 
 - a `Responder` is an object that can be converted to an `HttpResponse`
 - `HttpResponse::Ok().finish()` will return a response with an empty body
+- framework-agnostic integration tests allow for one to refactor the application
+  while maintaining the same API
+- `[[key]]` in `Cargo.toml` indicates we're working with an array
+  - a Rust project may have only one library, but may have multiple binaries
