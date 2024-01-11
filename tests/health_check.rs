@@ -27,5 +27,16 @@ fn spawn_app() {
     // tokio::spawn runs our server as a background process, which ensures that
     // we can write tests against the server without the spawning of the server
     // blocking any subsequent code
+    //
+    // tokio::test works in tandem with tokio::spawn:
+    //  - tokio::test spins up a runtime for each test at the beginning of the
+    //      test
+    //  - tokio::spawn spawns a thread to run a process in the background
+    //  - when the test is finished, the runtime is shut down
+    //  - when a runtime is shutdown, all associated tasks that have been spawned
+    //      using tokio::spawn are dropped
+    //
+    // This means that every time spawn_app is run, the server will be shut down
+    // when the test is finished - no clean up code required
     tokio::spawn(server);
 }

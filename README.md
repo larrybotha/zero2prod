@@ -50,3 +50,14 @@ Notes and annotations from the [zero2prod](https://www.zero2prod.com/) book
   while maintaining the same API
 - `[[key]]` in `Cargo.toml` indicates we're working with an array
   - a Rust project may have only one library, but may have multiple binaries
+
+### `tokio`
+
+- `tokio::test` spins up a new runtime for every test
+- `tokio::spawn` accepts a `Future`, running it as a background task. This is
+  useful when we have some async process that would block tests from being run
+  were it not run as a background task, such as our server
+- when a test finishes, `tokio::test` will shut down the runtime
+  - any spawned tasks in the test, such as those created by `tokio::spawn`,
+    are dropped, automatically cleaning up any background processes we may
+    have started
