@@ -61,3 +61,48 @@ Notes and annotations from the [zero2prod](https://www.zero2prod.com/) book
   - any spawned tasks in the test, such as those created by `tokio::spawn`,
     are dropped, automatically cleaning up any background processes we may
     have started
+
+### `std::net::TcpListener`
+
+- hardcoding an address to handle requests is all good and well, but our
+  integration tests quickly reveal how limited this approach is:
+  - each test should be run in isolation
+  - each test cannot make requests against the same port, then, because the
+    server will be dropped each time other tests complete
+  - we therefore need some way to dynamically get ports for each test to run
+    on so that they don't interfere with each other
+- Unix's `0` port will dynamically select a port - it is itself not a part that
+  can be bound to - only used to find an available port
+  - we can thus specify that each test use `127.0.0.1:0` to use an available
+    port for the test
+  - we can then pass an address explicitly to `zero2prod::run` specifying
+    which address to start our server
+  - this produces a new problem, however... for each test we need to know
+    which port has been made available before making a request against the
+    endpoint... how do we know which port the OS selected?
+- so, instead of providing an address for the server to run on, we need a
+  different mechanism:
+  - we need to bind to a port dynamically
+  - get that port
+  - provide the address to the test once the port is bound
+- we can do this using `TcpListener`, which binds to a socket given an address:
+
+  1.  we create a listener by specifying that we want the OS to resolve the
+      port:
+
+      ```rust
+      let listener = TcpListener::bind("127.0.0.1:0")
+          .expect("Failed to bind random port");
+      ```
+
+  1.  we get the port from the listener via `TcpListener::local_addr`:
+
+      ```rust
+      let port = listener.local_addr().unwrap().port();
+      ```
+
+  1.  we provide the port to the test:
+
+      ```rust
+      let address = format("http://127.0.0.1:{}", port)
+      ```
