@@ -4,5 +4,10 @@ use zero2prod::run;
 
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
-    run()?.await
+    // Create a socket that is bound to 8000 on the host
+    // This listener is the server, and client requests made to localhost:8000 will
+    // be handled by this server
+    let listener = std::net::TcpListener::bind("127.0.0.1:8000")?;
+
+    run(listener)?.await
 }

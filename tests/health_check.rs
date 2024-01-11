@@ -1,13 +1,15 @@
 //! tests/health_check.rs
+use std::net::TcpListener;
 
 #[tokio::test]
 async fn health_check_works() {
-    spawn_app();
+    let host = spawn_app();
+    let endpoint = format!("{host}/health_check");
 
     let client = reqwest::Client::new();
 
     let response = client
-        .get("http://127.0.0.1:8000/health_check") // assert that /health_check exists
+        .get(endpoint) // assert that /health_check exists
         .send()
         .await
         .expect("Failed to execute request.");
@@ -16,13 +18,23 @@ async fn health_check_works() {
     assert_eq!(response.content_length(), Some(0)); // assert that the body is empty
 }
 
-fn spawn_app() {
+fn spawn_app() -> String {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
+    let port = listener.local_addr().unwrap().port();
+
     // we could propagate the error using `?`, but there's no need as we're in a
     // test environment
     //
     // Instead, we can extract the value from the Result using .expect, or crash
     // things right here and now if we have Result::Err
-    let server = zero2prod::run().expect("Failed to bind address");
+    //
+    // Port 0 at the OS-level will scan for available ports. This allows each test
+    // to be run at its own isolated port
+    //
+    // This, however, means we can no longer rely on the hardcoded port in the
+    // test... we need some way to get the port allocated for each specific
+    // test-run
+    let server = zero2prod::run(listener).expect("Failed to bind address");
 
     // tokio::spawn runs our server as a background process, which ensures that
     // we can write tests against the server without the spawning of the server
@@ -39,4 +51,6 @@ fn spawn_app() {
     // This means that every time spawn_app is run, the server will be shut down
     // when the test is finished - no clean up code required
     tokio::spawn(server);
+
+    format!("http://127.0.0.1:{}", port)
 }
