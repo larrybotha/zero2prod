@@ -18,6 +18,58 @@ async fn health_check_works() {
     assert_eq!(response.content_length(), Some(0)); // assert that the body is empty
 }
 
+pub mod subscribe {
+    use super::spawn_app;
+
+    #[tokio::test]
+    async fn returns_200_for_valid_form_data() {
+        let address = spawn_app();
+        let client = reqwest::Client::new();
+
+        let body = "name=Jo%20Soap&email=josoap@example.com";
+        let response = client
+            .post(format!("{}/subscriptions", &address))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(body)
+            .send()
+            .await
+            .expect("Failed to execute request");
+
+        assert_eq!(response.status().as_u16(), 200);
+    }
+
+    #[tokio::test]
+    async fn returns_400_for_invalid_form_data() {
+        let test_cases = [
+            ("name=Jo%20Soap", "email is required"),
+            ("email=josoap@example.com", "name is required"),
+            ("", "name and email are required"),
+        ];
+
+        for (body, error_message) in test_cases.iter() {
+            let address = spawn_app();
+            let client = reqwest::Client::new();
+
+            let response = client
+                .post(format!("{}/{}", &address, "subscriptions"))
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .body(*body)
+                .send()
+                .await
+                .expect("Failed to execute request");
+
+            assert_eq!(
+                response.status().as_u16(),
+                400,
+                "Api did not fail with 400 Bad Request when payload was {}",
+                error_message
+            );
+        }
+    }
+}
+
+/// Spin up an instance of the application, and returns its address
+/// i.e. http://localhost:XXXX
 fn spawn_app() -> String {
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
     let port = listener.local_addr().unwrap().port();
