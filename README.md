@@ -51,6 +51,18 @@ Notes and annotations from the [zero2prod](https://www.zero2prod.com/) book
 - `[[key]]` in `Cargo.toml` indicates we're working with an array
   - a Rust project may have only one library, but may have multiple binaries
 
+#### Extractors
+
+- extractors in `actix_web` extract data from incoming requests, including:
+  - getting dynamic path segments
+  - query parameters
+  - parsing JSON-encoded request bodies
+  - and more...
+- the extractor we're going to use to extract data from requests that have the
+  content type of `application/www-x-form-urlencoded` is `actix_web::web::Form`
+  - `Form` expects a generic type, and that type must implement serde's
+    `DeserializeOwned` trait
+
 ### `tokio`
 
 - `tokio::test` spins up a new runtime for every test
@@ -106,3 +118,12 @@ Notes and annotations from the [zero2prod](https://www.zero2prod.com/) book
       ```rust
       let address = format("http://127.0.0.1:{}", port)
       ```
+
+### serde
+
+- serde doesn't do any serialisation / deserialisation of its own - crates that
+  manage specific formats are responsible for the actual conversion. e.g. in
+  `actix_web`, the `Form::from_request` method makes use of `serde_urlencoded`
+  to parse form data in requests
+- serde provides macros for `Serialize` and `Deserialize` which are added to
+  structs to automate conversion between formats and data structures
