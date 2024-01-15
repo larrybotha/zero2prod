@@ -127,3 +127,31 @@ Notes and annotations from the [zero2prod](https://www.zero2prod.com/) book
   to parse form data in requests
 - serde provides macros for `Serialize` and `Deserialize` which are added to
   structs to automate conversion between formats and data structures
+
+### database
+
+Choosing a database can be difficult, but the following are useful guidelines:
+
+- if you're not sure what you need, start with a relational db as they are good
+  for general-purpose use, and scale well initially
+- compile-time errors vs runtime errors are a good consideration with a language
+  like Rust. Some ORMs will only error at runtime - ideally we'd want to be
+  notified at compile-time that we've done something wrong so that we expose
+  our users to fewer issues
+- some ORMs use DSLs, while others require raw SQL:
+  - raw SQL may be less convenient, but it's portable
+  - DSLs may be convenient, but you're tied into the API, and it requires
+    learning and time investment
+- some ORMs offer async support, others not. If your application is async,
+  prefer an async ORM, as there are gotchas when attempting to mix the two
+  approaches - see pg54
+
+We're choosing [`sqlx`](https://docs.rs/sqlx/latest/sqlx/) for this project. In
+addition to the application support, `sqlx` has a CLI which is useful for
+migrations:
+
+```bash
+$ cargo install --version="~0.7" sqlx-cli \
+  --no-default-features --features rustls,postgres
+$ sqlx --version
+```
