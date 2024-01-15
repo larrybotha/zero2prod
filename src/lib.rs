@@ -13,6 +13,8 @@ struct FormData {
     email: String,
 }
 
+// T in Form<T> must implement DeserializeOwned from serde, which will deserialize
+// a url-encoded string into that struct
 async fn subscriptions(_form: web::Form<FormData>) -> HttpResponse {
     HttpResponse::Ok().finish()
 }
