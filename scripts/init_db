@@ -3,17 +3,49 @@
 set -x
 set -eo pipefail
 
-#DB_HOST="${POSTGRES_HOST:=localhost}"
+if ! [ -x "$(command -v psql)" ]; then
+  echo >&2 "Error: psql is not installed."
+  exit 1
+fi
+
+if ! [ -x "$(command -v sqlx)" ]; then
+  echo >&2 "Error: sqlx is not installed."
+  echo >&2 "Use:"
+  echo >&2 "cargo install --version='~0.7' sqlx-cli \ --no-default-features --features rustls,postgres"
+  echo >&2 "to install it."
+  exit 1
+fi
+
+DB_HOST="${POSTGRES_HOST:=localhost}"
 DB_NAME="${POSTGRES_NAME:=newsletter}"
 DB_PASSWORD="${POSTGRES_PASSWORD:=password}"
 DB_PORT="${POSTGRES_PORT:=5432}"
 DB_USER="${POSTGRES_USER:=postgres}"
+DATABASE_URL="postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
 
 num_connections=1000
 
 docker run \
-  -e POSTGRES_USER="$DB_USER" \
-  -e POSTGRES_PASSWORD="$DB_PASSWORD" \
-  -e POSTGRES_DB="$DB_NAME" \
-  -p "$DB_PORT":5432 \
+  --env POSTGRES_USER="$DB_USER" \
+  --env POSTGRES_PASSWORD="$DB_PASSWORD" \
+  --env POSTGRES_DB="$DB_NAME" \
+  --publish "$DB_PORT":5432 \
+  --name zero2prod \
+  --rm \
+  --detach \
   postgres -N "$num_connections"
+
+# psql env var required to prevent having to enter a password via a prompt
+export PGPASSWORD="$DB_PASSWORD"
+
+until psql -h "$DB_HOST" -U "$DB_USER" -p "$DB_PORT" -d "postgres" -c '\q'; do
+  # echo to stderr
+  >&2 echo "Postgres is still unavailable - sleeping" && sleep 1
+done
+echo "Postgres is up and running on port ${DB_PORT}!"
+
+# env var required by sqlx
+export DATABASE_URL
+
+sqlx database create
+docker attach zero2prod
