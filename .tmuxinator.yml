@@ -1,0 +1,22 @@
+---
+name: <%= Dir.pwd.split('/')[-1] %>
+root: <%= Dir.pwd %>
+
+on_project_exit:
+  - docker stop $(docker ps -a -q)
+
+windows:
+  - editor:
+      layout: 3d13,230x57,0,0[230x28,0,0,63,230x28,0,29{115x28,0,29,69,114x28,116,29,70}]
+      panes:
+        - vim
+        - epy
+        - z everything && vim
+
+  - backend:
+      layout: main-vertical
+      panes:
+        -
+        - cargo watch -x check -x test -x run
+        - ./scripts/init_db
+        - cargo watch -w src -s "http -v localhost:8000/health_check"
