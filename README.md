@@ -155,3 +155,8 @@ $ cargo install --version="~0.7" sqlx-cli \
   --no-default-features --features rustls,postgres
 $ sqlx --version
 ```
+
+- database constraints are useful, but they come at the cost of the database
+  having to perform validations before performing any writes
+  - before attempting to optimise constraints out of the database, ensure that
+    performance is actually a problem
