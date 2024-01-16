@@ -25,15 +25,17 @@ DATABASE_URL="postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NA
 
 num_connections=1000
 
-docker run \
-  --env POSTGRES_USER="$DB_USER" \
-  --env POSTGRES_PASSWORD="$DB_PASSWORD" \
-  --env POSTGRES_DB="$DB_NAME" \
-  --publish "$DB_PORT":5432 \
-  --name zero2prod \
-  --rm \
-  --detach \
-  postgres -N "$num_connections"
+if [[ -z "$SKIP_DOCKER" ]]; then
+  docker run \
+    --env POSTGRES_USER="$DB_USER" \
+    --env POSTGRES_PASSWORD="$DB_PASSWORD" \
+    --env POSTGRES_DB="$DB_NAME" \
+    --publish "$DB_PORT":5432 \
+    --name zero2prod \
+    --rm \
+    --detach \
+    postgres -N "$num_connections"
+fi
 
 # psql env var required to prevent having to enter a password via a prompt
 export PGPASSWORD="$DB_PASSWORD"
@@ -48,4 +50,8 @@ echo "Postgres is up and running on port ${DB_PORT}!"
 export DATABASE_URL
 
 sqlx database create
+sqlx migrate run
+
+echo "Postgres has been migrated, ready to go!"
+
 docker attach zero2prod
