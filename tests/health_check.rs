@@ -86,7 +86,7 @@ fn spawn_app() -> String {
     // This, however, means we can no longer rely on the hardcoded port in the
     // test... we need some way to get the port allocated for each specific
     // test-run
-    let server = zero2prod::run(listener).expect("Failed to bind address");
+    let server = zero2prod::startup::run(listener).expect("Failed to bind address");
 
     // tokio::spawn runs our server as a background process, which ensures that
     // we can write tests against the server without the spawning of the server
