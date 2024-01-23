@@ -20,15 +20,15 @@ tokio = { version = "1.35.1", features = ['macros', 'rt-multi-thread'] }
 serde = { version = "1.0.195", features = ['derive'] }
 config = "0.13.4"
 
-[dependences.sqlx]
-version = "0.7"
+[dependencies.sqlx]
+version = "0.7.3"
 default-features = false
 features = [
-  "runtime-actix-rustls", # use tokio runtime
-  "macros",               # enable sqlx macros
-  "postgres",             # unlock Postgres functionality
-  "uuid",                 # add support for mapping uuids
-  "chrono",               # add support for mapping timestamptz to Datetime<T>
+  "runtime-tokio", # use tokio runtime
+  "macros",        # enable sqlx macros
+  "postgres",      # unlock Postgres functionality
+  "uuid",          # add support for mapping uuids
+  "chrono",        # add support for mapping timestamptz to Datetime<T>
   # provide access to migration functions used by sqlx-cli - will be
   # used in migrations
   "migrate",
