@@ -19,11 +19,19 @@ async fn health_check_works() {
 }
 
 pub mod subscribe {
+    use sqlx::{Connection, PgConnection};
+    use zero2prod::configuration::get_configuration;
+
     use super::spawn_app;
 
     #[tokio::test]
     async fn returns_200_for_valid_form_data() {
         let address = spawn_app();
+        let config = get_configuration().expect("Failed to get config");
+        let connection_string = config.database.connection_string();
+        let mut connection = PgConnection::connect(&connection_string)
+            .await
+            .expect("Failed to connect to Postgres");
         let client = reqwest::Client::new();
 
         let body = "name=Jo%20Soap&email=josoap@example.com";
@@ -36,6 +44,14 @@ pub mod subscribe {
             .expect("Failed to execute request");
 
         assert_eq!(response.status().as_u16(), 200);
+
+        let entity = sqlx::query!("SELECT email, name FROM subscriptions")
+            .fetch_one(&mut connection)
+            .await
+            .expect("Failed to fetch saved subscription");
+
+        assert_eq!(entity.email, "josoap@example.com");
+        assert_eq!(entity.name, "Jo soap");
     }
 
     #[tokio::test]
@@ -48,7 +64,13 @@ pub mod subscribe {
 
         for (body, error_message) in test_cases.iter() {
             let address = spawn_app();
+            let config = get_configuration().expect("Failed to get config");
+            let connection_string = config.database.connection_string();
             let client = reqwest::Client::new();
+
+            PgConnection::connect(&connection_string)
+                .await
+                .expect("Unable to connect to Postgres");
 
             let response = client
                 .post(format!("{}/{}", &address, "subscriptions"))
