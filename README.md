@@ -50,6 +50,23 @@ Notes and annotations from the [zero2prod](https://www.zero2prod.com/) book
   while maintaining the same API
 - `[[key]]` in `Cargo.toml` indicates we're working with an array
   - a Rust project may have only one library, but may have multiple binaries
+- `App::app_data` can be used to pass application data around, making it
+  accessible to requests
+  - e.g. if you want to share a connection to a database, it can be passed to
+    `App::app_data`
+  - because we instantiate the app _inside_ `HttpServer::new`s closure, we will
+    get a new `App` instance every time a new server is spawned - i.e. for
+    each worker that `actix` spawns
+  - Everything inside `app_data` needs to be clonable, so that it's available
+    within each process
+  - `PgConnection` does not implement `Clone`, so it can't be passed to
+    `.app_data` as-is. How can we make a single instance available across
+    threads? By using `std::sync::Arc`. `Arc` is _always_ clonable, regardless
+    of what it contains
+  - But we can do better than that... `.app_data` can also receive an object
+    wrapped in `actix_web::web::Data`, which is itself a wrapper for `Arc`. If
+    data is wrapped in `Data` when passed to `.app_data`, the data becomes an
+    extractor - the data can be extracted from each request
 
 #### Extractors
 
@@ -160,3 +177,20 @@ $ sqlx --version
   having to perform validations before performing any writes
   - before attempting to optimise constraints out of the database, ensure that
     performance is actually a problem
+- `sqlx` runs asynchronously, but it doesn't allow multiple queries to be run
+  concurrently using the same database connection
+
+  To enforce this, `sqlx::execute` requires that a connection be passed in as
+  a mutable reference.
+
+  Why a mutable reference? Rust only allows a single mutable reference to
+  exist at a time - i.e. a mutable reference is a _unique_ reference.
+  `sqlx::execute` is guaranteed by Rust that the given connection cannot be used
+  elsewhere concurrently
+
+- requiring that `sqlx::execute` requires a single mutable connection seems
+  probalematic though... how do we allow an arbitrary number of connections to
+  be executed at the same time?
+
+  For this, `sqlx` has implemented its own pooling strategy, and with the
+  Postgres implementation we get a `PgPool` struct
