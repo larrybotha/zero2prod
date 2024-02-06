@@ -67,6 +67,8 @@ Notes and annotations from the [zero2prod](https://www.zero2prod.com/) book
     wrapped in `actix_web::web::Data`, which is itself a wrapper for `Arc`. If
     data is wrapped in `Data` when passed to `.app_data`, the data becomes an
     extractor - the data can be extracted from each request
+    - `web::Data` has `.get_ref` method, which behaves similarly to `Arc::as_ref`
+      provide access to the shared internal value
 
 #### Extractors
 
@@ -194,3 +196,21 @@ $ sqlx --version
 
   For this, `sqlx` has implemented its own pooling strategy, and with the
   Postgres implementation we get a `PgPool` struct
+
+- the database can be thought of as a global variable - multiple tests
+  augmenting it can have unintended consequences. To isolate tests from each
+  other, one can:
+  - wrap every test inside a transaction, assert within the transaction, and
+    then roll the transaction back, or
+  - spin up a new database for each integration test. To do this, for every
+    test, we need to:
+    - create a new database name, which we use `uuid::Uuid::new_v4` to do
+    - get a connection string for Postgres _without_ the database name
+    - get a connection to Postgres
+    - create the database given the generated name
+    - obtain a connection pool to the new database using the full connection
+      string
+    - run any migrations on the database
+    - return the connection string to be used in the tests
+- `PgConnection::connect` requires `sqlx::Connect` to be in scope
+- `PgConnection::connect::execute` requires `sqlx::Executor` to be in scope
