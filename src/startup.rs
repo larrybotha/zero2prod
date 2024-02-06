@@ -3,7 +3,7 @@ use actix_web::{web, App, HttpServer};
 use sqlx::PgPool;
 use std::net::TcpListener;
 
-use crate::routes::{health_check, subscriptions};
+use crate::routes::{health_check, subscribe};
 
 // Attempt 1:
 //  We use an async function returning a Future. src/main.rs will need to await the
@@ -35,7 +35,7 @@ pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, std::io::Er
     let server = HttpServer::new(move || {
         App::new()
             .route("/health_check", web::get().to(health_check))
-            .route("/subscriptions", web::post().to(subscriptions))
+            .route("/subscriptions", web::post().to(subscribe))
             // register the connection as part of the application state
             .app_data(db_pool.clone())
     })

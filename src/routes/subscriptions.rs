@@ -12,7 +12,7 @@ pub struct FormData {
 
 // T in Form<T> must implement DeserializeOwned from serde, which will deserialize
 // a url-encoded string into that struct
-pub async fn subscriptions(form: web::Form<FormData>, db_pool: web::Data<PgPool>) -> HttpResponse {
+pub async fn subscribe(form: web::Form<FormData>, db_pool: web::Data<PgPool>) -> HttpResponse {
     let result = sqlx::query!(
         r#"
             INSERT INTO subscriptions (id, email, name, subscribed_at)
@@ -23,7 +23,7 @@ pub async fn subscriptions(form: web::Form<FormData>, db_pool: web::Data<PgPool>
         form.name,
         Utc::now()
     )
-    .execute(db_pool.as_ref())
+    .execute(db_pool.get_ref())
     .await;
 
     match result {
