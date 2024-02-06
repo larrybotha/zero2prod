@@ -204,3 +204,16 @@ $ sqlx --version
     - return the connection string to be used in the tests
 - `PgConnection::connect` requires `sqlx::Connect` to be in scope
 - `PgConnection::connect::execute` requires `sqlx::Executor` to be in scope
+
+## links and resources
+
+- async/await:
+  - [async/await announcement](https://blog.rust-lang.org/2019/11/07/Async-await-stable.html#zero-cost-futures)
+  - [Zero-cost Async IO](https://www.youtube.com/watch?v=skos4B5x7qE)
+  - [Futures Explained](https://github.com/verhovsky/books-futures-explained/tree/master)
+- [simd-json](https://docs.rs/simd-json/0.3.18/simd_json/index.html)
+- [serde::serialize_seq](https://github.com/serde-rs/json/blob/4354fc3eb2232ee0ba9a9a23acce107a980a6dc0/src/ser.rs#L318)
+  - Context, pg68:
+    > For example, if you were adding support for JSON serialisation, your
+    > serialize_seq implementation would output an opening square bracket [ and
+    > return a type which can be used to serialize sequence elements.
