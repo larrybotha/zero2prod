@@ -1,9 +1,19 @@
 //! tests/health_check.rs
 use std::net::TcpListener;
+use uuid::Uuid;
+
+use zero2prod::configuration;
+
+use sqlx::{Connection, Executor, PgConnection};
+
+pub struct TestApp {
+    pub address: String,
+    pub db_pool: sqlx::PgPool,
+}
 
 #[tokio::test]
 async fn health_check_works() {
-    let host = spawn_app();
+    let TestApp { address: host, .. } = spawn_app().await;
     let endpoint = format!("{host}/health_check");
 
     let client = reqwest::Client::new();
@@ -23,15 +33,11 @@ pub mod subscribe {
     use zero2prod::configuration::get_configuration;
 
     use super::spawn_app;
+    use super::TestApp;
 
     #[tokio::test]
     async fn returns_200_for_valid_form_data() {
-        let address = spawn_app();
-        let config = get_configuration().expect("Failed to get config");
-        let connection_string = config.database.connection_string();
-        let mut connection = PgConnection::connect(&connection_string)
-            .await
-            .expect("Failed to connect to Postgres");
+        let TestApp { address, db_pool } = spawn_app().await;
         let client = reqwest::Client::new();
 
         let body = "name=Jo%20Soap&email=josoap@example.com";
@@ -46,12 +52,12 @@ pub mod subscribe {
         assert_eq!(response.status().as_u16(), 200);
 
         let entity = sqlx::query!("SELECT email, name FROM subscriptions")
-            .fetch_one(&mut connection)
+            .fetch_one(&db_pool)
             .await
             .expect("Failed to fetch saved subscription");
 
         assert_eq!(entity.email, "josoap@example.com");
-        assert_eq!(entity.name, "Jo soap");
+        assert_eq!(entity.name, "Jo Soap");
     }
 
     #[tokio::test]
@@ -63,7 +69,7 @@ pub mod subscribe {
         ];
 
         for (body, error_message) in test_cases.iter() {
-            let address = spawn_app();
+            let TestApp { address, .. } = spawn_app().await;
             let config = get_configuration().expect("Failed to get config");
             let connection_string = config.database.connection_string();
             let client = reqwest::Client::new();
@@ -92,9 +98,14 @@ pub mod subscribe {
 
 /// Spin up an instance of the application, and returns its address
 /// i.e. http://localhost:XXXX
-fn spawn_app() -> String {
+async fn spawn_app() -> TestApp {
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
     let port = listener.local_addr().unwrap().port();
+    let mut config = configuration::get_configuration().expect("Unable to get configuration");
+
+    config.database.database_name = Uuid::new_v4().to_string();
+
+    let connection_pool = configure_database(&config.database).await;
 
     // we could propagate the error using `?`, but there's no need as we're in a
     // test environment
@@ -108,7 +119,8 @@ fn spawn_app() -> String {
     // This, however, means we can no longer rely on the hardcoded port in the
     // test... we need some way to get the port allocated for each specific
     // test-run
-    let server = zero2prod::startup::run(listener).expect("Failed to bind address");
+    let server =
+        zero2prod::startup::run(listener, connection_pool.clone()).expect("Failed to bind address");
 
     // tokio::spawn runs our server as a background process, which ensures that
     // we can write tests against the server without the spawning of the server
@@ -126,5 +138,35 @@ fn spawn_app() -> String {
     // when the test is finished - no clean up code required
     tokio::spawn(server);
 
-    format!("http://127.0.0.1:{}", port)
+    TestApp {
+        address: format!("http://127.0.0.1:{}", port),
+        db_pool: connection_pool,
+    }
+}
+
+async fn configure_database(db_config: &configuration::DatabaseSettings) -> sqlx::PgPool {
+    // connect to Postgres
+    // PgConnection::Connect requires Connect to be in scope
+    let mut connection = PgConnection::connect(&db_config.connection_string_without_db())
+        .await
+        .expect("Failed to connect to Postgres");
+
+    // create database
+    connection
+        // PgConnection::execute requires Executor to be in scope
+        .execute(format!(r#"CREATE DATABASE "{}";"#, db_config.database_name).as_str())
+        .await
+        .expect("Unable to create database");
+
+    // connect to database
+    let connection_pool = sqlx::PgPool::connect(&db_config.connection_string())
+        .await
+        .expect("Failed to connect to PostGres");
+
+    sqlx::migrate!("./migrations")
+        .run(&connection_pool)
+        .await
+        .expect("Failed to migrate database");
+
+    connection_pool
 }

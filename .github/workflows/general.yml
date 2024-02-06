@@ -10,11 +10,11 @@ on:
   # this specific branch (a.k.a. book chapter).
   push:
     branches:
-      - root-chapter-03-part1
+      - feat/*
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
-      - root-chapter-03-part1
+      - feat/*
 
 env:
   CARGO_TERM_COLOR: always
