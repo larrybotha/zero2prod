@@ -17,6 +17,7 @@ windows:
       layout: main-vertical
       panes:
         -
-        - cargo watch -x check -x test -x run
+        - cargo watch -x run
+        - cargo watch -x check -x test
         - ./scripts/init_db
         - cargo watch -w src -s "http -v localhost:8000/health_check"
