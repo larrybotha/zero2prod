@@ -1,4 +1,5 @@
 use actix_web::dev::Server;
+use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpServer};
 use sqlx::PgPool;
 use std::net::TcpListener;
@@ -19,6 +20,14 @@ use crate::routes::{health_check, subscribe};
 //  We use return a Result of the server. This allows us to opt into using a Future
 //  src/main.rs, but allow for us to call `run` as a background task in tests
 pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, std::io::Error> {
+    env_logger::Builder::from_env(
+        // Get the default env vars that env_logger expects for writing logs,
+        // i.e. RUST_LOG
+        env_logger::Env::default().default_filter_or("info"),
+    )
+    // start the logger
+    .init();
+
     // Every time HttpServer::new's is called, actix will create its own worker
     // for the application instance. HttpServer::new's closure expects us to return
     // an instance of App
@@ -34,6 +43,7 @@ pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, std::io::Er
 
     let server = HttpServer::new(move || {
         App::new()
+            .wrap(Logger::default())
             .route("/health_check", web::get().to(health_check))
             .route("/subscriptions", web::post().to(subscribe))
             // register the connection as part of the application state
