@@ -87,8 +87,27 @@ The span's lifetime is delimited the following:
 Spans can be entered and exited multiple times - i.e. they can be paused, e.g.
 across threads, async tasks, etc.
 
+### Futures
+
+Futures are similar to Promises in Javascript. A future is polled until it is
+resolved or rejected. We want to be able to trace each time the future that is
+returned by `sqlx::query!(...).execute` is polled.
+
+To do this:
+
+- import `tracing::Instrument`
+  - `Instrument` extends `Future`s with the `instrument` method which accepts
+    a `tracing::Span` as the first argument
+- create a span specifically for the query
+- append `.instrument` to `.execute` before `await`ing the future
+- the logs will now contain multiple messages prepended by `<-` and `->` for the
+  query span, indicating each time the future is polled, until it is complete
+
 ## Links and resources
 
 - [Formal methods / TLA+](https://lamport.azurewebsites.net/tla/formal-methods-amazon.pdf)
-- [log - defactor logging crate for Rust applications](https://crates.io/crates/log)
+- [log - defacto logging crate for Rust applications](https://crates.io/crates/log)
 - [tracing](https://crates.io/crates/tracing)
+- [OpenTelemetry](https://opentelemetry.io/docs/what-is-opentelemetry/)
+  - observability framework and toolkit for creating and managing telemetry
+    data, before sending to storage or visualisation tools

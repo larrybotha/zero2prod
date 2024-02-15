@@ -2,6 +2,7 @@ use actix_web::{web, HttpResponse};
 use chrono::Utc;
 use serde::Deserialize;
 use sqlx::PgPool;
+use tracing::Instrument;
 use uuid::Uuid;
 
 #[derive(Deserialize)]
@@ -15,6 +16,7 @@ pub struct FormData {
 pub async fn subscribe(form: web::Form<FormData>, db_pool: web::Data<PgPool>) -> HttpResponse {
     let request_id = Uuid::new_v4();
     let request_prefix = format!("[request_id {request_id}] - ");
+    // create a span that will live for the duration of the request
     let request_span = tracing::info_span!(
         "Adding a new subscriber",
         // The '%' indicates to `tracing` that we want Display used to render the
@@ -28,16 +30,8 @@ pub async fn subscribe(form: web::Form<FormData>, db_pool: web::Data<PgPool>) ->
     // .enter() shouldn't be used in async code!
     let _request_span_guard = request_span.enter();
 
-    tracing::info!(
-        "{}'{}' '{}' as a new subscriber",
-        request_prefix,
-        form.email,
-        form.name
-    );
-    tracing::info!(
-        "{} Saving new subscriber details in database",
-        request_prefix
-    );
+    // create a span specifically for tracing the database query
+    let query_span = tracing::info_span!("Saving new subscriber details to database");
 
     let result = sqlx::query!(
         r#"
@@ -50,6 +44,7 @@ pub async fn subscribe(form: web::Form<FormData>, db_pool: web::Data<PgPool>) ->
         Utc::now()
     )
     .execute(db_pool.get_ref())
+    .instrument(query_span)
     .await;
 
     match result {
