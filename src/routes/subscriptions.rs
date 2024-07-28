@@ -21,7 +21,7 @@ pub async fn subscribe(form: web::Form<FormData>, db_pool: web::Data<PgPool>) ->
         "Adding a new subscriber",
         // The '%' indicates to `tracing` that we want Display used to render the
         // values
-        request_id = %request_id, // equivalent to request_id = %request_id
+        request_id = %request_id,
         subscriber_email = %form.email,
         subscriber_name = %form.name
     );
@@ -44,6 +44,8 @@ pub async fn subscribe(form: web::Form<FormData>, db_pool: web::Data<PgPool>) ->
         Utc::now()
     )
     .execute(db_pool.get_ref())
+    // tracing::Instrement extends the Future struct with .instrument for
+    // entering spans every time the future is polled
     .instrument(query_span)
     .await;
 
